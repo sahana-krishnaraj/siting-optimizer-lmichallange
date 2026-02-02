@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 #load the dataset we will use
-combined = pd.read_csv("/Users/sahana_krishnaraj/Documents/Spring 2026/LMI/final_combined_data.csv")
+combined = pd.read_csv("/Users/sahana_krishnaraj/Github/siting-optimizer-lmichallange/Datasets/Cleaned Data/final_combined_data.csv")
 
 #subset to get relevant columns
 '''
