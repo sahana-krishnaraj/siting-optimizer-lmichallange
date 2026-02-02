@@ -1,3 +1,3 @@
-# Data Divas: Environmental Risk Siting Optimzer
+# Environmental Risk Siting Optimzer
 ** Streamlit Application
 ** Code for Cleaning
