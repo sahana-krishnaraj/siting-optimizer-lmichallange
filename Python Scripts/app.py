@@ -6,17 +6,6 @@ from sklearn.preprocessing import MinMaxScaler
 combined = pd.read_csv("/Users/sahana_krishnaraj/Github/siting-optimizer-lmichallange/Datasets/Cleaned Data/final_combined_data.csv")
 
 #subset to get relevant columns
-'''
-Wildfire Hazard Potential (WHP)
-H + VH Pct = Percent of area in the geographic unit mapped as high or very high WHP
-
-Drought Levels (Percentiles)
-Nnone = No Drought
-DO = Drought Level 0 (Abnormally Dry)
-D1 = Drought Level 1 (Moderate Drought)
-D2 = Drought Level 2 (Severe Drought)
-D3 = Drought Level 3 (Extreme Drought)
-'''
 subset = combined[["County","State","H + VH Pct","None","D0","D1","D2","D3","D4"]]
 subset = subset.copy()
 
