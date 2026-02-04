@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 #load the dataset we will use
-combined = pd.read_csv("/Users/sahana_krishnaraj/Github/siting-optimizer-lmichallange/Datasets/Cleaned Data/final_combined_data.csv")
+combined = pd.read_csv("final_combined_data.csv")
 
 #subset to get relevant columns
 subset = combined[["County","State","H + VH Pct","None","D0","D1","D2","D3","D4"]]
