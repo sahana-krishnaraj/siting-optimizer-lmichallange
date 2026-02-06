@@ -3,8 +3,9 @@ import geopandas as gpd
 from shapely.geometry import Point
 
 # read in data for wind and fuel
-wind = pd.read_csv('Wind_Power.csv')
-fuel = pd.read_csv("Oil_Gas_Fuel.csv")
+    # changed path but might not work, final csv is already in the folder.
+wind = pd.read_csv('Datasets/Wind\ and\ Fuel/Wind.csv')
+fuel = pd.read_csv("Datasets/Wind\ and\ Fuel/Oil_Gas_Fuel.csv")
 
 # create geometries of each obs using lat and long columns
 wind['geometry'] = wind.apply(
@@ -29,7 +30,7 @@ counties = counties.to_crs('EPSG:4326') # make sure the same crs is used
 counties_wind = gpd.sjoin(counties, wind_gdf, how='left', predicate='within', rsuffix='wind') # within: the entire coordinate should be completely in the county boundary (no part of it can be outside the border line)
 final = gpd.sjoin(counties_wind, fuel_gdf, how='left', predicate='within', rsuffix='fuel') # suffix so dup column names arent created
 
-final.to_csv('windfuel_counties.csv', index=False) # worked!
+# final.to_csv('windfuel_counties.csv', index=False) # worked!
 
 
 # important new variables:
