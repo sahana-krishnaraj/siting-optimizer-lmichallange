@@ -1,0 +1,213 @@
+---
+title: "Data Cleaning"
+output: html_document
+date: "2026-02-02"
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+```
+
+
+## Wind Power
+```{r}
+raw <- read_excel("Global-Wind-Power-Tracker-February-2025.xlsx", sheet = "Data")
+head(raw)
+
+# selecting variables
+onlycolumns <- raw[, c("Date Last Researched", "Country/Area", "Project Name", "Phase Name", "Capacity (MW)", "Status", "Latitude", "Longitude", "Local area (taluk, county)", "State/Province")]
+head(onlycolumns)
+
+# rename columns
+onlycolumns <- onlycolumns %>% rename(Country = `Country/Area`, County = `Local area (taluk, county)`, State=`State/Province`)
+
+# subset rows to only USA
+cleaned <- onlycolumns %>% filter(Country=="United States")
+head(cleaned)
+
+# check the types of statuses
+unique(onlycolumns$Status)
+# keep operating, construction
+  # maybe include pre-construction? this phase is where govt approval is being sought
+# subset status rows
+cleaned <- cleaned %>% filter(Status==c("operating", "construction"))
+
+# subset - get latest date for each project
+  # also filter by phase name bc some projects have multiple phases in 1 year - get latest one (most are numerals)
+cleaned <- cleaned %>% group_by(`Project Name`) %>%
+  arrange(desc(`Date Last Researched`), desc(`Phase Name`)) %>%
+  slice(1) %>%
+  ungroup()
+
+cleaned_wind <- cleaned
+cleaned_wind
+```
+
+Do the same for the other sheet (below capacity).
+```{r}
+raw_below <- read_excel("Global-Wind-Power-Tracker-February-2025.xlsx", sheet = "Below Threshold")
+
+# selecting variables
+onlycolumns_below <- raw_below[, c("Date Last Researched", "Country/Area", "Project Name", "Phase Name", "Capacity (MW)", "Status", "Latitude", "Longitude", "Local area (taluk, county)", "State/Province")]
+head(onlycolumns_below)
+
+# rename columns
+onlycolumns_below <- onlycolumns_below %>% rename(Country = `Country/Area`, County = `Local area (taluk, county)`, State=`State/Province`)
+
+# subset rows to only USA
+cleaned_below <- onlycolumns_below %>% filter(Country=="United States")
+head(cleaned_below)
+
+# check the types of statuses
+unique(onlycolumns$Status)
+# keep operating, construction
+  # maybe include pre-construction? this phase is where govt approval is being sought
+# subset status rows
+cleaned_below <- cleaned_below %>% filter(Status==c("operating", "construction"))
+
+# subset - get latest date for each project
+  # dont filter by phases here bc all have weird names, not numerical
+cleaned_below <- cleaned_below %>%
+  group_by(`Project Name`) %>%
+  slice_max(`Date Last Researched`, n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+cleaned_below
+```
+
+Combine the two datasets.
+```{r}
+nrow(cleaned_wind) + nrow(cleaned_below) # 691 rows
+
+wind <- rbind(cleaned_wind, cleaned_below)
+nrow(wind)
+
+# dont need phase name column
+wind <- wind %>% select(-`Phase Name`)
+
+wind
+
+is.na(wind$County) # there are some na values
+
+write.csv(wind, "Wind_Power.csv", row.names=FALSE)
+```
+
+
+
+## Oil and Gas
+Production and reserves sheet has information on quantity of fuel produced.
+Main data sheet does not, but it has lat, long, state, and county data. Both have unit ID. Merge both datasets.
+```{r}
+# production and reserves data
+prodres <- read_excel("Global-Oil-and-Gas-Extraction-Tracker-Feb-2025.xlsx", sheet = "Production & reserves")
+head(prodres)
+colnames(prodres)
+
+# get only us prodres
+prodres_us <- prodres %>% filter(`Country/Area`=="United States")
+
+
+# main data
+main <- read_excel("Global-Oil-and-Gas-Extraction-Tracker-Feb-2025.xlsx", sheet = "Main data")
+head(main)
+colnames(main)
+
+# get us only main
+main_us <- main %>% filter(`Country/Area`=="United States")
+
+
+# combine by Unit ID - inner join, returns fuel plants that are in BOTH datasets only
+oilgas <- inner_join(main_us, prodres_us, by = "Unit ID")
+head(oilgas)
+nrow(oilgas) # 5954 obs
+colnames(oilgas)
+
+
+# filter columns
+  # all fuel related data should come from only the prodres sheet
+oilgas <- oilgas[, c("Unit ID", "Subnational unit (province, state)", "Latitude", "Longitude", "Status", "Status year",
+                     # vars from prodres sheet:
+                     "Production/reserves", "Fuel description", "Data year", "Quantity (converted)", "Units (converted)")]
+
+# filter rows
+unique(oilgas$Status) # filter status as operating and in dev
+oilgas <- oilgas %>% filter(Status==c("operating", "in development"))
+
+unique(oilgas$`Production/reserves`)
+# cumulative production is total production - we don't want this
+# only keep production and reserves (annual avgs)
+oilgas <- oilgas %>% filter(`Production/reserves`==c("production", "reserves"))
+
+
+# seems like a different unit is associated with each type of fuel
+unique(oilgas$`Units (converted)`)
+unique(oilgas$`Fuel description`)
+
+# obs in each category of fuel type
+sum(oilgas$`Fuel description` == "hydrocarbons") # 7
+  # hydrocarbons are the base materials for oil and gas fuel
+sum(oilgas$`Fuel description` == "gas") # 981
+sum(oilgas$`Fuel description` == "oil") # 331
+sum(oilgas$`Fuel description` == "condensate") # 37
+  # low density mixture of hydrocarbons
+sum(oilgas$`Fuel description` == "ngl") # 13
+sum(oilgas$`Fuel description` == "oil and gas") # 1
+
+# keep oil and gas fuel types only
+oilgas <- oilgas %>% filter(`Fuel description` == c("oil", "gas"))
+
+unique(oilgas$`Fuel description`)
+unique(oilgas$`Units (converted)`)
+
+
+# datasets - one for oil, and one for gas
+oil <- oilgas[oilgas$`Fuel description`=="oil", ]
+gas <- oilgas[oilgas$`Fuel description`=="gas", ]
+unique(oil$`Fuel description`)
+unique(gas$`Fuel description`)
+
+# most units are measured per year, some not. remove the ones not (might be sum, outlier)
+unique(oil$`Units (converted)`)
+oil <- oil %>% filter(`Units (converted)` == "million bbl/y")
+unique(gas$`Units (converted)`)
+gas <- gas %>% filter(`Units (converted)` == "million m³/y")
+
+# create csvs
+write.csv(oil, "Oil_Fuel.csv", row.names=FALSE)
+write.csv(gas, "Gas_Fuel.csv", row.names = FALSE)
+```
+
+
+## Exploring Quantities
+
+Wind Power
+```{r}
+head(wind)
+
+# score var is capacity
+min(wind$`Capacity (MW)`) # 1
+max(wind$`Capacity (MW)`) # 2587
+
+hist(wind$`Capacity (MW)`)
+hist(unique(wind$`Capacity (MW)`)) 
+# ton of concentration from 0-500. outlier at ~2500
+```
+
+Oil
+```{r}
+min(oil$`Quantity (converted)`) # 0
+max(oil$`Quantity (converted)`) # 700
+
+hist(oil$`Quantity (converted)`)
+# highly concentrated from 0-100
+```
+
+Gas
+```{r}
+min(gas$`Quantity (converted)`) # 1.5...
+max(gas$`Quantity (converted)`) # 36901
+
+hist(gas$`Quantity (converted)`)
+# highly concentrated from 0-500, huuuuge skew
+```
