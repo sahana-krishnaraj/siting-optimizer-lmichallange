@@ -8,7 +8,7 @@ import folium
 from streamlit_folium import st_folium
 
 #load the dataset we will use
-map_data = pd.read_csv("map_data.csv")
+map_data = pd.read_csv("condensed.csv")
 
 ###SHOULD I NORMALIZE THE SCORES BEFORE COMBINING?###
 #if you need to modify the weights for the drought risk score, you can do so here. already made a column, but this will just replace!
