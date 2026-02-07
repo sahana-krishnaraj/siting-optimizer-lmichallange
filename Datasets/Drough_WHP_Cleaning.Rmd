@@ -1,0 +1,128 @@
+---
+title: "All_Data_Cleaning"
+output: html_document
+date: "2026-02-07"
+---
+
+```{r}
+library(dplyr)
+```
+
+
+## Wildfire Hazard Potential
+```{r}
+whp_raw <- read_excel("WHP2023_County_Summary.xlsx", sheet="county_summary", skip=2, col_names=TRUE)
+  # some column names are left out but we have all the ones we need
+colnames(whp_raw)
+
+# clean up
+whp <- whp %>% select(NAME, STATEFP, COUNTYFP, GEOID, COUNTYNS, `VH Pct`, `H Pct`, `M Pct`, `L Pct`, `VL Pct`, `NB Pct`, `W Pct`)
+whp <- whp %>% rename(CountyName = NAME, VH = `VH Pct`, H = `H Pct`, M = `M Pct`, L = `L Pct`, VL = `VL Pct`, NB = `NB Pct`, W = `W Pct`)
+head(whp)
+
+
+# create a Wildfire Hazard Potential Score from 0-1
+  # 7 categories: percent of very low, low, moderate, high, very high, risk of wildfire + percent of water, nonburnable land
+  # one county can have values across multiple categories
+
+# each category has a weight depending on WHP. multiply weight by value in column (%). add the scores.
+
+# VL: 0-20%
+# L:20-40
+# M:40-60
+# H:60-80
+# VH:80-100
+# W: 0
+# NB: 0
+
+# get the percentage based on these divisions, then add
+whp <- whp %>% mutate(WHP_Score = (VL * 0.1) + (L * 0.3) + (M * 0.5) + (H * 0.7) + (VH * 0.9) + (W * 0) + (NB * 0))
+head(whp)
+
+wildfire <- whp %>% select(CountyName, GEOID, COUNTYNS, WHP_Score)
+head(wildfire)
+```
+
+
+## Drought Risk
+```{r}
+drought_raw <- read.csv("drought.csv", header=TRUE)
+head(drought_raw)
+colnames(drought_raw)
+unique(drought_raw$FIPS) 
+
+# for 4 digit fips, put leading 0s
+drought_raw$FIPS <- as.character(drought_raw$FIPS)
+drought_raw$FIPS <- ifelse(nchar(drought_raw$FIPS) == 4, paste0("0", drought_raw$FIPS), drought_raw$FIPS)
+
+# each county has multiple dates of data
+# keep the latest date for each county
+drought <- drought_raw %>%
+  group_by(FIPS) %>%
+  filter(MapDate == max(MapDate)) %>%
+  ungroup()
+
+# remove unnecessary columns
+head(drought)
+unique(drought$MapDate) # all obs have the same last day of data collection, 12/26/2023
+drought <- drought %>% select(-MapDate, -ValidStart, -ValidEnd, -StatisticFormatID)
+
+
+# composite score
+  # levels: none, D0-D4, where D stands for drought level and the value is the number of weeks in that specified category
+  # each category can have a value of up to 100. normalize the scores by making them proportions of total.
+
+# create percentage of drought risk each county had
+  # None: 0%
+  # D0: 0-20%
+  # D1: 20-40%
+  # D2: 40-60%
+  # D3: 60-80%
+  # D4: 80-100%
+
+# convert weeks to percentages, normalizing the score using total weeks
+drought <- drought %>% 
+  mutate(
+    # total drought exposure across all categories
+    Total_Drought = D0 + D1 + D2 + D3 + D4 + None,
+    
+    # create proportions
+    D0_prop = D0 / Total_Drought,
+    D1_prop = D1 / Total_Drought,
+    D2_prop = D2 / Total_Drought,
+    D3_prop = D3 / Total_Drought,
+    D4_prop = D4 / Total_Drought,
+    None_prop = None / Total_Drought)
+
+# create score from 0-1
+drought <- drought %>% mutate(DroughtRisk_Score =
+                                (D0_prop * 0.1) + (D1_prop * 0.3) + (D2_prop * 0.5) + (D3_prop * 0.7) + (D4_prop * 0.9) + (None_prop * 0))
+
+# clean up columns
+colnames(drought)
+drought <- drought %>% select(FIPS, County, State, DroughtRisk_Score)
+```
+
+
+## Combine WHP and Drought
+```{r}
+# combine on FIPS and GEOID - should be the same value
+nrow(drought) # 3222
+nrow(wildfire) # 3143
+
+# outer join - keep ALL obs from both datasets
+combined <- full_join(wildfire, drought, by = c("GEOID" = "FIPS")) # 3222 rows
+
+# check for na values
+combined %>% 
+  summarise(
+    Both_Scores = sum(!is.na(WHP_Score) & !is.na(DroughtRisk_Score)),
+    Only_WHP = sum(!is.na(WHP_Score) & is.na(DroughtRisk_Score)),
+    Only_Drought = sum(is.na(WHP_Score) & !is.na(DroughtRisk_Score))
+  )
+# makes sense based on indiv row nums
+
+
+# create csv
+write.csv(combined, "Drought_WHP.csv", row.names=FALSE)
+```
