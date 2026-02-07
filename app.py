@@ -1,20 +1,23 @@
 import streamlit as st
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+import geopandas as gpd
+from shapely import wkt
+import matplotlib.pyplot as plt
+import folium
+from streamlit_folium import st_folium
 
 #load the dataset we will use
-combined = pd.read_csv("final_combined_data.csv")
-
-#subset to get relevant columns
-subset = combined[["County","State","H + VH Pct","None","D0","D1","D2","D3","D4"]]
-subset = subset.copy()
-
-#rename the columns and create a drought risk score
-subset = subset.rename(columns={"H + VH Pct": "Wildfire Hazard Potential"})
+map_data = pd.read_csv("map_data.csv")
 
 ###SHOULD I NORMALIZE THE SCORES BEFORE COMBINING?###
+#if you need to modify the weights for the drought risk score, you can do so here. already made a column, but this will just replace!
 scaler = MinMaxScaler()
-subset["Drought Risk Score"] = 0.0*subset["None"] + 0.1*subset["D0"] + 0.3*subset["D1"] + 0.4*subset["D2"] + 0.6*subset["D3"] + 0.9*subset["D4"]
+map_data["Drought Risk Score"] = 0.0*map_data["None"] + 0.1*map_data["D0"] + 0.3*map_data["D1"] + 0.4*map_data["D2"] + 0.6*map_data["D3"] + 0.9*map_data["D4"]
+
+#create geodataframe
+map_data["geometry"] = map_data["geometry"].apply(wkt.loads)
+map_gdf = gpd.GeoDataFrame(map_data, crs="EPSG:4326") #crs is the map grid system 
 
 def environmental_score(wildfire_user, drought_user, rank, high=True):
     #compute a proportion of the weight so it is scalable
@@ -23,25 +26,37 @@ def environmental_score(wildfire_user, drought_user, rank, high=True):
     drought_weight = drought_user / total_weight
 
     #compute the risk score
-    subset["Suitability Score"] = (wildfire_weight * subset["Wildfire Hazard Potential"] +
-                                   drought_weight * subset["Drought Risk Score"])
+    map_gdf["Suitability Score"] = (wildfire_weight * map_gdf["Wildfire Hazard Potential"] +
+                                   drought_weight * map_gdf["Drought Risk Score"])
     
     #standardize the Suitability Score
-    subset["Suitability Score"] = scaler.fit_transform(subset[["Suitability Score"]])
+    map_gdf["Suitability Score"] = scaler.fit_transform(map_gdf[["Suitability Score"]])
     
-    #rank the counties
-    if high: #sort the counties in descending order based on the number of counties requested
-        ranked_counties = subset[["County","State", "Suitability Score"]].sort_values(by="Suitability Score", ascending=False).head(rank)
-    else: #sort the counties in ascending order based on the number of counties requested
-        ranked_counties = subset[["County","State", "Suitability Score"]].sort_values(by="Suitability Score", ascending=True).head(rank)
+    #rank the counties from the highest to lowest score
+    mapped_counties = map_gdf.sort_values(by="Suitability Score", ascending=False).head(rank)
+    ranked_counties = map_gdf[["County","State","Suitability Score"]].sort_values(by="Suitability Score", ascending=False).head(rank)
 
-    return ranked_counties
+    #create a folium map
+    us_center = [37.0902, -95.7129] #center of the US to start the display
 
+    m = folium.Map(location=us_center, tiles = "Cartodb Positron", zoom_start=4)
+    folium.GeoJson(
+        mapped_counties,
+        name = "Suitability Score",
+        style_function=lambda feature: {
+            'fillColor': 'green',
+            'color': 'blue',
+            'weight': 0.5,
+            'fillOpacity': 0.7,
+        }).add_to(m)
+    return ranked_counties, m
 
+st.set_page_config(layout="wide")
 st.title("Data Center Siting Optimizer Prototype") 
 st.text("Recommends optimal locations to build data centers based on environmental risk factors.")
 WFH_value = st.slider("Select a weight for Wildfire Hazard Potential", 0.0, 1.0, 0.5)
 DR_value = st.slider("Select a weight for Drought Risk", 0.0, 1.0, 0.5)
 rank_value = st.slider("Select number of locations to recommend", 1, 20, 5)
 st.header("Top " + str(rank_value) + " Recommended Counties:")
-st.write(environmental_score(WFH_value, DR_value, rank_value, high=True))
+rankings, display = environmental_score(WFH_value, DR_value, rank_value, high=True)
+st_folium(display, use_container_width=True)
