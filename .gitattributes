@@ -1,0 +1,2 @@
+map_data.csv filter=lfs diff=lfs merge=lfs -text
+condensed.csv filter=lfs diff=lfs merge=lfs -text
