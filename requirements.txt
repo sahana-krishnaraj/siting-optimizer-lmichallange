@@ -2,3 +2,8 @@ streamlit
 scikit-learn
 pandas
 numpy
+geopandas
+matplotlib
+folium
+streamlit-folium
+shapely
