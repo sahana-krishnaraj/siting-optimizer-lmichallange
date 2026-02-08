@@ -10,3 +10,6 @@ ENV/
 myenv/
 .env
 
+#file
+.DS_Store
+
