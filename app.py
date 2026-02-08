@@ -15,15 +15,13 @@ def load_data(url):
     map_data["geometry"] = map_data["geometry"].apply(wkt.loads) 
     return gpd.GeoDataFrame(map_data, crs="EPSG:4326")
 
-map_data = load_data("true_final.csv")    
+map_data = load_data("dataset.csv") #load the dataset
 
 
 def environmental_score(gdf, wildfire_user, drought_user, wind_user, oil_user, gas_user, rank):
     #make a copy
     gdf = gdf.copy()
     gdf = gdf[gdf["Pareto Efficient"] == True] #filter for pareto efficient locations
-
-    #compute a proportion of the weight so it is scalable
 
     ##higher weight for wildfire, drought, oil, gas is less suitable and higher for wind is more suitable
     total_weight = wildfire_user + drought_user + wind_user + oil_user + gas_user
@@ -95,28 +93,28 @@ with col1:
     st.write("Drought Weight")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
     subcol1.markdown("<span style='font-size: 12px;'>Low Priority</span>", unsafe_allow_html=True)
-    DR_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance drought risk", label_visibility="collapsed", key="drought")
+    DR_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance drought risk", label_visibility="collapsed")
     subcol3.markdown("<span style='font-size: 12px;'>High Priority</span>", unsafe_allow_html=True)
 
     #WIND ENERGY
     st.write("Wind Energy Weight")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
     subcol1.markdown("<span style='font-size: 12px;'>Low Priority</span>", unsafe_allow_html=True)
-    WI_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance wind energy", label_visibility="collapsed", key="wind")
+    WI_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance wind energy", label_visibility="collapsed")
     subcol3.markdown("<span style='font-size: 12px;'>High Priority</span>", unsafe_allow_html=True)
 
     #OIL PRODUCTION
     st.write("Oil Production Weight")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
     subcol1.markdown("<span style='font-size: 12px;'>Low Sustainability</span>", unsafe_allow_html=True)
-    OI_value = subcol2.slider("", -1.0, 1.0, 0.0, help="Allows you to adjust the importance oil production", label_visibility="collapsed", key="oil")
+    OI_value = subcol2.slider("", -1.0, 1.0, 0.0, help="Allows you to adjust the importance oil production", label_visibility="collapsed")
     subcol3.markdown("<span style='font-size: 12px;'>High Sustainability</span>", unsafe_allow_html=True)
 
     #GAS PRODUCTION
     st.write("Gas Production Weight")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
     subcol1.markdown("<span style='font-size: 12px;'>Low Sustainability</span>", unsafe_allow_html=True)
-    GA_value = subcol2.slider("", -1.0, 1.0, 0.0, help="Allows you to adjust the importance gas production", label_visibility="collapsed", key="gas")
+    GA_value = subcol2.slider("", -1.0, 1.0, 0.0, help="Allows you to adjust the importance gas production", label_visibility="collapsed")
     subcol3.markdown("<span style='font-size: 12px;'>High Sustainability</span>", unsafe_allow_html=True)
 
     rank_value = st.slider("Number of Locations", 1, 38, 3)
