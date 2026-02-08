@@ -1,8 +1,7 @@
 geopandas
 streamlit
-scikit-learn
 pandas
-numpy
 matplotlib
 folium
 streamlit-folium
+shapely
