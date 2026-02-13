@@ -28,7 +28,7 @@ map_data = load_data("latest.csv") #load the dataset
 def environmental_score(gdf, wildfire_user, drought_user, wind_user, oil_user, gas_user, rank):
     #make a copy
     gdf = gdf.copy()
-    gdf = gdf[gdf["Pareto Efficient"] == True] #filter for pareto efficient locations
+    #gdf = gdf[gdf["Pareto Efficient"] == True] #filter for pareto efficient locations
 
 
     ##higher weight for wildfire, drought, oil, gas is less suitable and higher for wind is more suitable
@@ -56,9 +56,12 @@ def environmental_score(gdf, wildfire_user, drought_user, wind_user, oil_user, g
     scaler = MinMaxScaler(feature_range=(0, 100))
     gdf["Environmental Compatibility (%)"] = scaler.fit_transform(gdf[["Environmental Compatibility (%)"]])
 
+    #pareto efficient counties
+    pareto = gdf[gdf["Pareto Efficient"] == True]
+
     #rank the counties from the highest to lowest score
-    top_gdf = gdf.sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #will be fed into the map
-    rankings = gdf[["County","State Name","Environmental Compatibility (%)"]].sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #used to display
+    top_gdf = pareto.sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #will be fed into the map
+    rankings = pareto[["County","State Name","Environmental Compatibility (%)"]].sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #used to display
 
     rankings = rankings.reset_index(drop=True)
     rankings.index = rankings.index + 1 
@@ -188,7 +191,7 @@ with col1:
     st.write("Gas Production Capacity")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
     subcol1.markdown("<span style='font-size: 12px;'>Low Preference</span>", unsafe_allow_html=True)
-    GA_value = subcol2.slider("", -1.0, 1.0, 0.0, help="Allows you to adjust the importance gas production", label_visibility="collapsed")
+    GA_value = subcol2.slider("", 0.0, 1.0, 0.0, help="Allows you to adjust the importance gas production", label_visibility="collapsed")
     subcol3.markdown("<span style='font-size: 12px;'>High Preference</span>", unsafe_allow_html=True)
 
     #RANK
