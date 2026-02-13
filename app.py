@@ -49,8 +49,8 @@ def environmental_score(gdf, wildfire_user, drought_user, wind_user, oil_user, g
     wind_weight * gdf["Wind Plant Capacity (SCALE)"]
     - wildfire_weight * gdf["Wildfire Hazard Potential Score"]
     - drought_weight * gdf["Drought Risk Score"]
-    + oil_weight * gdf["Oil Production Quantity (SCALE)"]
-    + gas_weight * gdf["Gas Production Quantity (SCALE)"]
+    - oil_weight * gdf["Oil Production Quantity (SCALE)"]
+    - gas_weight * gdf["Gas Production Quantity (SCALE)"]
 ) 
 
     scaler = MinMaxScaler(feature_range=(0, 100))
@@ -153,39 +153,39 @@ with col1:
 
     #WILDFIRE
     st.subheader("Disaster Risk Weights")
-    st.write("_Category reflects Wildfire Hazard Potential and Drought Risk in a given area. Move the slider to indicate how important avoiding these risks is to you: lower values = less concern, higher values = greater concern._")
+    st.write("_Category reflects Wildfire Hazard Potential and Drought Risk in a given county. Move the slider to indicate your tolerance to these risks: lower values = lower tolerance, higher values = higher tolerance._")
 
-    st.write("Wildfire Weight")
+    st.write("Wildfire Hazard Risk")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
-    subcol1.markdown("<span style='font-size: 12px;'>Low Wildfire Risk</span>", unsafe_allow_html=True)
+    subcol1.markdown("<span style='font-size: 12px;'>Low Tolerance</span>", unsafe_allow_html=True)
     WFH_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance wildfire risk", label_visibility="collapsed")
-    subcol3.markdown("<span style='font-size: 12px;'>High Wildfire Risk</span>", unsafe_allow_html=True)
+    subcol3.markdown("<span style='font-size: 12px;'>High Tolerance</span>", unsafe_allow_html=True)
 
     #DROUGHT
-    st.write("Drought Weight")
+    st.write("Drought Hazard Risk")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
-    subcol1.markdown("<span style='font-size: 12px;'>Low Drought Risk</span>", unsafe_allow_html=True)
+    subcol1.markdown("<span style='font-size: 12px;'>Low Tolerance</span>", unsafe_allow_html=True)
     DR_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance drought risk", label_visibility="collapsed")
-    subcol3.markdown("<span style='font-size: 12px;'>High Drought Risk</span>", unsafe_allow_html=True)
+    subcol3.markdown("<span style='font-size: 12px;'>High Tolerance</span>", unsafe_allow_html=True)
 
     #WIND ENERGY
     st.subheader("Energy Source Weights")
-    st.write("_Category reflects energy production in each area. Move the sliders to indicate your preference: higher wind = more wind energy, higher oil or gas = more of those resources._")
-    st.write("Wind Energy Weight")
-    subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
-    subcol1.markdown("<span style='font-size: 12px;'>Low Priority</span>", unsafe_allow_html=True)
-    WI_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance wind energy", label_visibility="collapsed")
-    subcol3.markdown("<span style='font-size: 12px;'>High Priority</span>", unsafe_allow_html=True)
-
-    #OIL PRODUCTION
-    st.write("Oil Production Weight")
+    st.write("_Category reflects energy production in a given county. Move the sliders to indicate your preference: higher values indicates higher preference for these energy sources._")
+    st.write("Wind Energy Capacity")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
     subcol1.markdown("<span style='font-size: 12px;'>Low Preference</span>", unsafe_allow_html=True)
-    OI_value = subcol2.slider("", -1.0, 1.0, 0.0, help="Allows you to adjust the importance oil production", label_visibility="collapsed")
+    WI_value = subcol2.slider("", 0.0, 1.0, 0.5, help="Allows you to adjust the importance wind energy", label_visibility="collapsed")
+    subcol3.markdown("<span style='font-size: 12px;'>High Preference</span>", unsafe_allow_html=True)
+
+    #OIL PRODUCTION
+    st.write("Oil Production Capacity")
+    subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
+    subcol1.markdown("<span style='font-size: 12px;'>Low Preference</span>", unsafe_allow_html=True)
+    OI_value = subcol2.slider("", 0.0, 1.0, 0.0, help="Allows you to adjust the importance oil production", label_visibility="collapsed")
     subcol3.markdown("<span style='font-size: 12px;'>High Preference</span>", unsafe_allow_html=True)
 
     #GAS PRODUCTION
-    st.write("Gas Production Weight")
+    st.write("Gas Production Capacity")
     subcol1, subcol2, subcol3 = st.columns([0.25, 0.3, 0.25])
     subcol1.markdown("<span style='font-size: 12px;'>Low Preference</span>", unsafe_allow_html=True)
     GA_value = subcol2.slider("", -1.0, 1.0, 0.0, help="Allows you to adjust the importance gas production", label_visibility="collapsed")
