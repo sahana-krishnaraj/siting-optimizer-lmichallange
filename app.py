@@ -60,21 +60,26 @@ def environmental_score(gdf, wildfire_user, drought_user, wind_user, oil_user, g
     pareto = gdf[gdf["Pareto Efficient"] == True]
 
     #rank the counties from the highest to lowest score
-    top_gdf = pareto.sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #will be fed into the map
-    rankings = pareto[["County","State Name","Environmental Compatibility (%)"]].sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #used to display
-
-    rankings = rankings.reset_index(drop=True)
-    rankings.index = rankings.index + 1 
+    if rank <= len(pareto):
+        top_gdf = pareto.sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #will be fed into the map
+        rankings = pareto[["County","State Name","Environmental Compatibility (%)"]].sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank) #used to display
+        rankings = rankings.reset_index(drop=True)
+        rankings.index = rankings.index + 1 
+    else:
+        st.warning(f"Requested number of locations to recommend exceeds the number of Pareto efficient locations of ({len(pareto)})", icon="⚠️")
+        top_gdf = gdf.sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank)
+        rankings = gdf[["County","State Name","Environmental Compatibility (%)"]].sort_values(by="Environmental Compatibility (%)", ascending=False).head(rank)
+        rankings = rankings.reset_index(drop=True)
+        rankings.index = rankings.index + 1 
 
     #return values
     return rankings, top_gdf
-
 #create a folium map
 def build_map(gdf, index_rankings):
     us_center = [37.0902, -95.7129] #center of the US to start the display
     html = gdf.to_html(index = False)
     #build the map
-    m = folium.Map(location=us_center, tiles = "Cartodb dark_matter", zoom_start=4)
+    m = folium.Map(location=us_center, tiles = "Cartodb positron", zoom_start=4)
     #add the dataset
     folium.GeoJson(gdf).add_to(m)
     for index, row in gdf.iterrows():
@@ -196,13 +201,18 @@ with col1:
 
     #RANK
     st.subheader("Presentation Options")
-    rank_value = st.slider("Number of Locations to Recommend", 1 , 10, 3)
+    rank_value = st.slider("Number of Locations to Recommend", 1, len(map_data))
     rankings, top_gdf = environmental_score(map_data, WFH_value, DR_value, WI_value, OI_value, GA_value, rank_value)
 
 with col2:
     st.header(f"Top {rank_value} Recommended Counties:")
-    st_folium(build_map(top_gdf, rankings), width = "stretch")
-    st.subheader("Rankings Table")
-    st.dataframe(rankings)
+    if rank_value <= 10:
+         st_folium(build_map(top_gdf, rankings), width = "stretch")
+         st.subheader("Rankings Table")
+         st.dataframe(rankings)
+    else:
+        st_folium(build_map(top_gdf, rankings), width = "stretch")
+        st.subheader("Rankings Table")
+        st.dataframe(rankings)
 
 
